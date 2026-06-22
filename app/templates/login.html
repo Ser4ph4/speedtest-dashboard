@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedWatch · Login</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --accent: #3fb950;
+            --error: #f85149;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            background: rgba(63, 185, 80, .12);
+            border: 1px solid rgba(63, 185, 80, .25);
+            border-radius: 12px;
+            margin-bottom: .75rem;
+        }
+
+        .logo-icon svg {
+            width: 26px;
+            height: 26px;
+            fill: var(--accent);
+        }
+
+        .logo h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -.02em;
+        }
+
+        .logo p {
+            font-size: .82rem;
+            color: var(--muted);
+            margin-top: .25rem;
+        }
+
+        label {
+            display: block;
+            font-size: .8rem;
+            color: var(--muted);
+            margin-bottom: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: .65rem .9rem;
+            color: var(--text);
+            font-size: .95rem;
+            outline: none;
+            transition: border-color .15s;
+            margin-bottom: 1.1rem;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: #000;
+            font-weight: 600;
+            font-size: .95rem;
+            border: none;
+            border-radius: 8px;
+            padding: .7rem;
+            cursor: pointer;
+            transition: opacity .15s;
+            margin-top: .25rem;
+        }
+
+        button:hover {
+            opacity: .85;
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            background: rgba(248, 81, 73, .12);
+            border: 1px solid rgba(248, 81, 73, .3);
+            color: var(--error);
+            border-radius: 8px;
+            padding: .65rem .9rem;
+            font-size: .88rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                </svg>
+            </div>
+            <h1>SpeedWatch</h1>
+            <p>Network Speed Dashboard</p>
+        </div>
+
+        <div class="error-msg" id="errMsg"></div>
+
+        <label for="username">Usuário</label>
+        <input type="text" id="username" autocomplete="username" placeholder="admin" />
+
+        <label for="password">Senha</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="••••••••" />
+
+        <button id="btnLogin">Entrar</button>
+    </div>
+
+    <script>
+        const btn = document.getElementById('btnLogin');
+        const err = document.getElementById('errMsg');
+
+        async function doLogin() {
+            btn.disabled = true;
+            btn.textContent = 'Entrando…';
+            err.classList.remove('show');
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location = '/dashboard';
+                } else {
+                    err.textContent = data.error || 'Credenciais inválidas';
+                    err.classList.add('show');
+                }
+            } catch (e) {
+                err.textContent = 'Erro de conexão';
+                err.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        }
+
+        btn.addEventListener('click', doLogin);
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    </script>
+</body>
+
+</html>

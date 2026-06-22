@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedWatch · Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1c2128;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --dl: #3fb950;
+            /* download  — green  */
+            --ul: #58a6ff;
+            /* upload    — blue   */
+            --ping: #f0883e;
+            /* ping      — orange */
+            --jitter: #bc8cff;
+            /* jitter    — purple */
+            --accent: #3fb950;
+            --radius: 10px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
+        }
+
+        /* ── Nav ─────────────────────────────────────── */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: .75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: -.02em;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        nav .spacer {
+            flex: 1;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Filter pills ────────────────────────────── */
+        .pill-group {
+            display: flex;
+            gap: .4rem;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 20px;
+            padding: .3rem .85rem;
+            font-size: .82rem;
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+        .pill:hover,
+        .pill.active {
+            background: rgba(63, 185, 80, .15);
+            border-color: rgba(63, 185, 80, .4);
+            color: var(--accent);
+        }
+
+        select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 8px;
+            padding: .32rem .7rem;
+            font-size: .82rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 8px;
+            padding: .32rem .8rem;
+            font-size: .82rem;
+            cursor: pointer;
+            transition: all .15s;
+            text-decoration: none;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--ping);
+            color: var(--ping);
+        }
+
+        /* ── Main ────────────────────────────────────── */
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* ── Cards row ───────────────────────────────── */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .card.dl::before {
+            background: var(--dl);
+        }
+
+        .card.ul::before {
+            background: var(--ul);
+        }
+
+        .card.ping::before {
+            background: var(--ping);
+        }
+
+        .card.jitter::before {
+            background: var(--jitter);
+        }
+
+        .card-label {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--muted);
+            margin-bottom: .5rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+
+        .card-label .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .card.dl .dot {
+            background: var(--dl);
+        }
+
+        .card.ul .dot {
+            background: var(--ul);
+        }
+
+        .card.ping .dot {
+            background: var(--ping);
+        }
+
+        .card.jitter .dot {
+            background: var(--jitter);
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            line-height: 1;
+            color: var(--text);
+        }
+
+        .card-unit {
+            font-size: .85rem;
+            font-weight: 400;
+            color: var(--muted);
+            margin-left: .2rem;
+        }
+
+        .card-sub {
+            font-size: .78rem;
+            color: var(--muted);
+            margin-top: .4rem;
+        }
+
+        /* ── Charts row ──────────────────────────────── */
+        .charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .charts {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+        }
+
+        .panel-title {
+            font-size: .82rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .chart-wrap {
+            position: relative;
+        }
+
+        /* ── Table ───────────────────────────────────── */
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .9rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-header-title {
+            font-size: .82rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--muted);
+        }
+
+        .table-count {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .85rem;
+        }
+
+        thead th {
+            padding: .6rem 1rem;
+            text-align: left;
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--muted);
+            font-weight: 500;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        tbody td {
+            padding: .6rem 1rem;
+            color: var(--text);
+        }
+
+        tbody td.muted {
+            color: var(--muted);
+        }
+
+        .badge-host {
+            display: inline-block;
+            background: rgba(88, 166, 255, .12);
+            border: 1px solid rgba(88, 166, 255, .25);
+            color: var(--ul);
+            border-radius: 6px;
+            padding: .1rem .55rem;
+            font-size: .78rem;
+            font-family: monospace;
+        }
+
+        .val-dl {
+            color: var(--dl);
+            font-weight: 600;
+        }
+
+        .val-ul {
+            color: var(--ul);
+            font-weight: 600;
+        }
+
+        .val-ping {
+            color: var(--ping);
+            font-weight: 500;
+        }
+
+        a.result-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: .8rem;
+        }
+
+        a.result-link:hover {
+            color: var(--text);
+        }
+
+        /* ── Loading / empty ─────────────────────────── */
+        .skeleton {
+            opacity: .35;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a class="nav-logo" href="#">Speed<span>Watch</span></a>
+        <div class="spacer"></div>
+        <div class="nav-controls">
+            <div class="pill-group" id="hostPills"></div>
+            <select id="daysSel">
+                <option value="7">7 dias</option>
+                <option value="14">14 dias</option>
+                <option value="30" selected>30 dias</option>
+                <option value="90">90 dias</option>
+                <option value="365">1 ano</option>
+                <option value="3650">Todo o histórico</option>
+            </select>
+            </select>
+            <a class="btn-logout" href="/logout">Sair</a>
+        </div>
+    </nav>
+
+    <main>
+
+        <div class="cards">
+            <div class="card dl">
+                <div class="card-label"><span class="dot"></span>Download</div>
+                <div class="card-value" id="cDl">—<span class="card-unit">Mbps</span></div>
+                <div class="card-sub" id="cDlHost">Último resultado</div>
+            </div>
+            <div class="card ul">
+                <div class="card-label"><span class="dot"></span>Upload</div>
+                <div class="card-value" id="cUl">—<span class="card-unit">Mbps</span></div>
+                <div class="card-sub" id="cUlHost">Último resultado</div>
+            </div>
+            <div class="card ping">
+                <div class="card-label"><span class="dot"></span>Ping</div>
+                <div class="card-value" id="cPing">—<span class="card-unit">ms</span></div>
+                <div class="card-sub" id="cPingHost">Último resultado</div>
+            </div>
+            <div class="card jitter">
+                <div class="card-label"><span class="dot"></span>Jitter</div>
+                <div class="card-value" id="cJitter">—<span class="card-unit">ms</span></div>
+                <div class="card-sub" id="cJitterSub">Último resultado</div>
+            </div>
+        </div>
+
+        <div class="charts">
+            <div class="panel">
+                <div class="panel-title">Velocidade ao longo do tempo</div>
+                <div class="chart-wrap" style="height:260px">
+                    <canvas id="chartSpeed"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Latência ao longo do tempo</div>
+                <div class="chart-wrap" style="height:260px">
+                    <canvas id="chartLatency"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <div class="table-header">
+                <div class="table-header-title">Resultados recentes</div>
+                <div class="table-count" id="tableCount"></div>
+            </div>
+            <div style="overflow-x:auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>Host</th>
+                            <th>Download</th>
+                            <th>Upload</th>
+                            <th>Ping</th>
+                            <th>Jitter</th>
+                            <th>Servidor</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="8" class="empty-state">Carregando…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ── State ────────────────────────────────────────────────────────────────
+        let activeHost = null;
+        let days = 30;
+
+        const chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: { color: '#8b949e', font: { size: 11 }, boxWidth: 10, padding: 14 }
+                },
+                tooltip: {
+                    backgroundColor: '#1c2128',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    padding: 10,
+                    callbacks: {}
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#8b949e', font: { size: 10 }, maxTicksLimit: 8 },
+                    grid: { color: 'rgba(48,54,61,.6)' }
+                },
+                y: {
+                    ticks: { color: '#8b949e', font: { size: 10 } },
+                    grid: { color: 'rgba(48,54,61,.6)' }
+                }
+            }
+        };
+
+        Chart.defaults.color = '#8b949e';
+
+        let speedChart = null;
+        let latencyChart = null;
+
+        function initCharts() {
+            const ctxS = document.getElementById('chartSpeed').getContext('2d');
+            const ctxL = document.getElementById('chartLatency').getContext('2d');
+
+            speedChart = new Chart(ctxS, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    ...chartDefaults,
+                    scales: {
+                        ...chartDefaults.scales,
+                        y: {
+                            ...chartDefaults.scales.y, beginAtZero: true,
+                            ticks: { ...chartDefaults.scales.y.ticks, callback: v => v + ' Mbps' }
+                        }
+                    }
+                }
+            });
+
+            latencyChart = new Chart(ctxL, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    ...chartDefaults,
+                    scales: {
+                        ...chartDefaults.scales,
+                        y: {
+                            ...chartDefaults.scales.y, beginAtZero: true,
+                            ticks: { ...chartDefaults.scales.y.ticks, callback: v => v + ' ms' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── API helpers ──────────────────────────────────────────────────────────
+        async function api(path) {
+            const r = await fetch(path);
+            if (r.status === 401) { window.location = '/login'; return null; }
+            return r.json();
+        }
+
+        function qs(extra = {}) {
+            const p = { days };
+            if (activeHost) p.host = activeHost;
+            Object.assign(p, extra);
+            return '?' + new URLSearchParams(p).toString();
+        }
+
+        // ── Render helpers ───────────────────────────────────────────────────────
+        function fmtDate(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts.endsWith('Z') ? ts : ts + 'Z');
+            return d.toLocaleString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function fmtNum(v, dec = 1) {
+            return v != null ? (+v).toFixed(dec) : '—';
+        }
+
+        function setCard(id, val, unit) {
+            const el = document.getElementById(id);
+            el.innerHTML = val !== null
+                ? `${fmtNum(val)}<span class="card-unit">${unit}</span>`
+                : `—<span class="card-unit">${unit}</span>`;
+        }
+
+        // ── Load hosts → build pills ─────────────────────────────────────────────
+        async function loadHosts() {
+            const hosts = await api('/api/hosts');
+            if (!hosts) return;
+            const container = document.getElementById('hostPills');
+            container.innerHTML = '';
+
+            const allPill = mkPill('Todos', null);
+            container.appendChild(allPill);
+            hosts.forEach(h => container.appendChild(mkPill(h, h)));
+        }
+
+        function mkPill(label, host) {
+            const p = document.createElement('button');
+            p.className = 'pill' + (activeHost === host ? ' active' : '');
+            p.textContent = label;
+            p.addEventListener('click', () => {
+                activeHost = host;
+                document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+                p.classList.add('active');
+                loadAll();
+            });
+            return p;
+        }
+
+        // ── Load stats → update cards ────────────────────────────────────────────
+        async function loadStats() {
+            const data = await api('/api/stats' + qs());
+            if (!data) return;
+
+            // Se um host estiver ativo, mostra ele. Se for "Todos", ordena os dados para pegar o teste com o horário (timestamp) mais recente de todos
+            const src = activeHost
+                ? (data.latest.find(x => x.host === activeHost) || data.latest[0])
+                : [...data.latest].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+
+            if (src) {
+                setCard('cDl', src.download_mbps, 'Mbps');
+                setCard('cUl', src.upload_mbps, 'Mbps');
+                setCard('cPing', src.ping_ms, 'ms');
+                setCard('cJitter', src.jitter_ms, 'ms');
+
+                const when = fmtDate(src.timestamp);
+                const who = src.host ? ` · ${src.host}` : '';
+                ['cDlHost', 'cUlHost', 'cPingHost', 'cJitterSub'].forEach(id => {
+                    document.getElementById(id).textContent = when + who;
+                });
+            }
+        }
+
+        // ── Load chart data ───────────────────────────────────────────────────────
+        async function loadCharts() {
+            const rows = await api('/api/results' + qs({ limit: 500 }));
+            if (!rows || !rows.length) return;
+
+            // Ordena os registros pelo tempo de execução
+            const sorted = rows.slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // 1. Cria uma propriedade temporária com o horário já formatado (por minuto)
+            const rowsWithTimeSlot = sorted.map(r => ({
+                ...r,
+                timeSlot: fmtDate(r.timestamp)
+            }));
+
+            // 2. Extrai os blocos de tempo únicos para o eixo X (elimina os duplicados na mesma janela de minuto)
+            const labels = [...new Set(rowsWithTimeSlot.map(r => r.timeSlot))];
+
+            // Identifica quais hosts precisam ser plotados na tela
+            const hostsToPlot = activeHost ? [activeHost] : [...new Set(sorted.map(r => r.host))];
+
+            const colorPalette = {
+                'Download': { border: '#3fb950', bg: 'rgba(63,185,80,.08)' },
+                'Upload': { border: '#58a6ff', bg: 'rgba(88,166,255,.08)' },
+                'Ping': { border: '#f0883e', bg: 'rgba(240,136,62,.08)' },
+                'Jitter': { border: '#bc8cff', bg: 'rgba(188,140,255,.08)' }
+            };
+
+            const speedDatasets = [];
+            const latencyDatasets = [];
+
+            hostsToPlot.forEach((host, index) => {
+                const hostRows = rowsWithTimeSlot.filter(r => r.host === host);
+
+                // Agrupa usando o timeSlot formatado como chave única do minuto para este host
+                const rowMap = new Map(hostRows.map(r => [r.timeSlot, r]));
+
+                // Alinha perfeitamente as métricas no mesmo slot de tempo global do eixo X
+                const dlData = labels.map(slot => rowMap.has(slot) ? rowMap.get(slot).download_mbps : null);
+                const ulData = labels.map(slot => rowMap.has(slot) ? rowMap.get(slot).upload_mbps : null);
+                const pingData = labels.map(slot => rowMap.has(slot) ? rowMap.get(slot).ping_ms : null);
+                const jitterData = labels.map(slot => rowMap.has(slot) ? rowMap.get(slot).jitter_ms : null);
+
+                const labelSuffix = activeHost ? '' : ` (${host})`;
+                const isSecond = index > 0;
+                const borderDash = isSecond ? [4, 4] : []; // Segunda máquina ganha visual tracejado
+
+                speedDatasets.push(
+                    {
+                        label: `Download${labelSuffix}`,
+                        data: dlData,
+                        borderColor: colorPalette['Download'].border,
+                        backgroundColor: isSecond ? 'transparent' : colorPalette['Download'].bg,
+                        borderWidth: 2,
+                        borderDash: borderDash,
+                        pointRadius: 3,
+                        tension: .3,
+                        fill: !isSecond,
+                        spanGaps: true // Conecta a linha continuamente mesmo pulando os pontos nulos da outra máquina
+                    },
+                    {
+                        label: `Upload${labelSuffix}`,
+                        data: ulData,
+                        borderColor: colorPalette['Upload'].border,
+                        backgroundColor: isSecond ? 'transparent' : colorPalette['Upload'].bg,
+                        borderWidth: 2,
+                        borderDash: borderDash,
+                        pointRadius: 3,
+                        tension: .3,
+                        fill: !isSecond,
+                        spanGaps: true
+                    }
+                );
+
+                latencyDatasets.push(
+                    {
+                        label: `Ping${labelSuffix}`,
+                        data: pingData,
+                        borderColor: colorPalette['Ping'].border,
+                        backgroundColor: isSecond ? 'transparent' : colorPalette['Ping'].bg,
+                        borderWidth: 2,
+                        borderDash: borderDash,
+                        pointRadius: 3,
+                        tension: .3,
+                        fill: !isSecond,
+                        spanGaps: true
+                    },
+                    {
+                        label: `Jitter${labelSuffix}`,
+                        data: jitterData,
+                        borderColor: colorPalette['Jitter'].border,
+                        backgroundColor: isSecond ? 'transparent' : colorPalette['Jitter'].bg,
+                        borderWidth: 2,
+                        borderDash: borderDash,
+                        pointRadius: 3,
+                        tension: .3,
+                        fill: !isSecond,
+                        spanGaps: true
+                    }
+                );
+            });
+
+            speedChart.data.labels = labels;
+            speedChart.data.datasets = speedDatasets;
+            speedChart.update();
+
+            latencyChart.data.labels = labels;
+            latencyChart.data.datasets = latencyDatasets;
+            latencyChart.update();
+        }
+
+        // ── Load recent table ─────────────────────────────────────────────────────
+        async function loadTable() {
+            const rows = await api('/api/recent' + qs({ limit: 50 }));
+            if (!rows) return;
+
+            const tbody = document.getElementById('tableBody');
+            document.getElementById('tableCount').textContent =
+                rows.length ? `${rows.length} registros` : '';
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum resultado encontrado</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => `
+			<tr>
+				<td class="muted">${fmtDate(r.timestamp)}</td>
+				<td><span class="badge-host">${r.host || '—'}</span></td>
+				<td class="val-dl">${fmtNum(r.download_mbps)}</td>
+				<td class="val-ul">${fmtNum(r.upload_mbps)}</td>
+				<td class="val-ping">${fmtNum(r.ping_ms)}</td>
+				<td class="muted">${fmtNum(r.jitter_ms)}</td>
+				<td class="muted" title="${r.server_name || ''}">${r.server_location || '—'}</td>
+				<td>${r.result_url
+                    ? `<a class="result-link" href="${r.result_url}" target="_blank" rel="noopener">↗</a>`
+                    : '<span class="muted">—</span>'
+                }</td>
+			</tr>
+		`).join('');
+        }
+
+        // ── Load all ──────────────────────────────────────────────────────────────
+        async function loadAll() {
+            await Promise.all([loadStats(), loadCharts(), loadTable()]);
+        }
+
+        // ── Days selector ─────────────────────────────────────────────────────────
+        document.getElementById('daysSel').addEventListener('change', e => {
+            days = +e.target.value;
+            loadAll();
+        });
+
+        // ── Init ──────────────────────────────────────────────────────────────────
+        initCharts();
+        loadHosts();
+        loadAll();
+    </script>
+</body>
+
+</html>

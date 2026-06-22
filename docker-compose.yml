@@ -1,0 +1,22 @@
+services:
+  speedwatch:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: speedtest-dashboard
+    restart: unless-stopped
+    ports:
+      - "5300:5000"
+    environment:
+      - TZ=America/Sao_Paulo
+      - JWT_SECRET=Oy5xz0en06EjAul5dtbPo8tnjggQIEmx
+      - API_KEY=X1iOxOCR2EvqgMThFcyGI01TLoAuNqTe
+      - ADMIN_USER=nemik
+      - ADMIN_PASS=jurema2026
+      - DB_PATH=/data/speedtest.db
+    volumes:
+      - ./data:/data
+
+networks:
+  default:
+    name: speedtest-net

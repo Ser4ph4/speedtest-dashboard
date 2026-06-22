@@ -1,0 +1,6 @@
+data/
+app/__pycache__/
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
