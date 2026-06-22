@@ -1,9 +1,7 @@
 services:
   speedwatch:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
-    container_name: speedtest-dashboard
+    image: speedtest-dashboard-speedwatch:latest
+    container_name: speedtest-dashboard-note
     restart: unless-stopped
     ports:
       - "5300:5000"
