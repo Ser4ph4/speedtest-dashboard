@@ -1,8 +1,9 @@
+version: '3.8'
+
 services:
   speedwatch:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
+    image: speedtest-dashboard-speedwatch:latest
+    pull_policy: never  # <--- ESTA LINHA É A MÁGICA
     container_name: speedtest-dashboard
     restart: unless-stopped
     ports:
