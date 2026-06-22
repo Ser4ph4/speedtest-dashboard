@@ -31,4 +31,4 @@ jobs:
         with:
           context: ./app
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/speedtest-dashboard:latest
+          tags: ghcr.io/ser4ph4/speedtest-dashboard:latest
